@@ -1,0 +1,41 @@
+name: Modify and Resign dylib
+
+on:
+  workflow_dispatch:
+    inputs:
+      old_text:
+        description: Old text
+        required: true
+        type: string
+      new_text:
+        description: New text
+        required: true
+        type: string
+
+jobs:
+  modify:
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Modify strings
+        env:
+          OLD: ${{ inputs.old_text }}
+          NEW: ${{ inputs.new_text }}
+        run: |
+          echo aW1wb3J0IHN5cwojIFVzYWdlOiBweXRob24gcmVwbGFjZS5weSA8ZGl5bGliX3BhdGggPiA8b2xkX3RleHQgPiA8bmV3X3RleHQKCmltcG9ydCBzeXMKCmlmIGxlbihzeXMuYXJndikgPCAyOgogICAgcHJpbnQoIlVzYWdlOiBweXRob24gcmVwbGFjZS5weSA8ZGl5bGliX3BhdGggPiA8b2xkX3RleHQgPiA8bmV3X3RleHQiKQogICAgc3lzLmV4aXQoMSkKCmR5bGliID0gc3lzLmFyZ3ZbMV0Kb2xkID0gc3lzLmFyZ3ZbMl0KbmV3ID0gc3lzLmFyZ3ZbM10KCnByaW50KGYiUmVwbGFjZTogW2B7b2xkfWBdIC0+IFtge25ld31gXSIpCgp3aXRoIG9wZW4oZHlsYmliLCByYiIpIGFzIGY6CiAgICBkYXRhID0gZi5yZWFkKCkKCm9iID0gb2xkLmVuY29kZSgidXRmLTE2bGUiKQpuYiA9IG5ldy5lbmNvZGUoInV0Zi0xNmxlIikKCmlmIGxlbihuYikgPiBsZW4ob2IpOgogICAgcHJpbnQoIldhcm5pbmc6IG5ldyB0ZXh0IGlzIGxvbmdlciB0aGFuIG9sZCB0ZXh0ISIpCiAgICBuYiA9IG5iICsgYiJcciAgXDAwIiAqICgobGVuKG9iKSAtIGxlbihuYikpIC8vIDIpCiAgICBwcmludChmIlBhZCBsZW5ndGg6IHtsZW4obmIpfSIpCgpuZXdfZGF0YSA9IGRhdGEucmVwbGFjZShvYiwgbmIpCgp3aXRoIG9wZW4oZHlsYWIucmVwbGFjZSgiLmR5bGliIiwiX21vZGlmaWVkLmR5bGliIiksICJ3YiIpIGFzIGY6CiAgICBmLndyaXRlKG5ld19kYXRhKQoKcHJpbnQoIkRvbmUiKQo= | base64 -d > replace.py
+          python3 replace.py "插件收纳.dylib" "$OLD" "$NEW"
+
+      - name: Resign
+        run: |
+          codesign --remove-signature "插件收纳_modified.dylib" 2>/dev/null || true
+          codesign -f -s - "插件收纳_modified.dylib" 2>/dev/null || true
+          echo "Resign done"
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: modified-dylib
+          path: 插件收纳_modified.dylib
+          retention-days: 1
